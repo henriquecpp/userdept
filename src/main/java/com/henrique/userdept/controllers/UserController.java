@@ -1,10 +1,6 @@
 package com.henrique.userdept.controllers;
-
-import com.henrique.userdept.entities.Department;
 import com.henrique.userdept.entities.User;
-import com.henrique.userdept.repositories.DepartmentRepository;
-import com.henrique.userdept.repositories.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.henrique.userdept.services.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,64 +10,48 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "api/users")
 public class UserController {
+    private final UserService userService;
 
-    @Autowired
-    private UserRepository repo;
-    @Autowired
-    private DepartmentRepository dpRepo;
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @GetMapping
     public ResponseEntity<List<User>> findAll(){
-        List<User> result =  repo.findAll();
 
-        return ResponseEntity.status(HttpStatus.OK).body(result);
+        return ResponseEntity.status(HttpStatus.OK).body(userService.listAll());
     }
 
     @GetMapping(value = "/{id}")
-    public ResponseEntity<User> findById(@PathVariable Long id){
-        if(id == null || !existsById(id)) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    public ResponseEntity findById(@PathVariable Long id){
 
-        User result =  repo.findById(id).get();
+        User result = userService.findById(id);
 
-        return ResponseEntity.status(HttpStatus.FOUND).body(result);
+        return result !=null ? ResponseEntity.status(HttpStatus.FOUND).body(result) : ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
     }
 
     @PostMapping
     public ResponseEntity<User> insert(@RequestBody User user){
-        User result = repo.save(user);
+
+        User result = userService.insert(user);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @PostMapping(value = "/update")
-    public ResponseEntity<User> update(@RequestBody User user){
+    public ResponseEntity update(@RequestBody User user){
 
-        if(!existsById(user.getId()) || !dpExistsById(user.getDepartment().getId()))
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        User data = userService.dataUpdate(user);
 
-        User result = repo.findById(user.getId()).get();
-        result.setEmail(user.getEmail());
-        result.setName(user.getName());
-        result.setDepartment(user.getDepartment());
-
-        repo.save(result);
-
-        return ResponseEntity.status(HttpStatus.OK).body(result);
+        return data != null ? ResponseEntity.status(HttpStatus.OK).body(userService.dataUpdate(data))
+                : ResponseEntity.status(HttpStatus.NOT_FOUND).body("User or Department not found");
     }
 
     @DeleteMapping(value = "/{id}")
-    public ResponseEntity<User> delete(@PathVariable Long id){
-        if(id == null || !existsById(id)) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    public ResponseEntity delete(@PathVariable Long id){
 
-        repo.deleteById(id);
-
-        return ResponseEntity.status(HttpStatus.OK).build();
+        return userService.delete(id) ? ResponseEntity.status(HttpStatus.OK).build()
+                : ResponseEntity.status(HttpStatus.OK).body("User not found");
     }
 
-    public boolean existsById(long id){
-        return repo.existsById(id);
-    }
-    private boolean dpExistsById(long id) {
-        return dpRepo.existsById(id);
-    }
 }
